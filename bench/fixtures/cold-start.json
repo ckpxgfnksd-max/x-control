@@ -1,0 +1,37 @@
+{
+  "pulse_data": {
+    "today": "2026-05-16",
+    "own_handle": "p1_cold_start",
+    "own_tweets": [
+      {
+        "id": "fixture_p1_001",
+        "text": "first crack at this thing. let's see what sticks.",
+        "created_at": "2026-05-16T09:14:00+00:00",
+        "like_count": 0,
+        "retweet_count": 0,
+        "reply_count": 0,
+        "impression_count": 7,
+        "quote_count": 0,
+        "owned": true
+      },
+      {
+        "id": "fixture_p1_002",
+        "text": "wrote a thing today about how i think about systems.",
+        "created_at": "2026-05-16T14:02:00+00:00",
+        "like_count": 0,
+        "retweet_count": 0,
+        "reply_count": 0,
+        "impression_count": 3,
+        "quote_count": 0,
+        "owned": true
+      }
+    ],
+    "own_mentions": {"data": [], "includes": {"users": []}},
+    "kol_rows": [],
+    "viral_posts": [],
+    "failures": [],
+    "cost_summary": "official.me x 1 = $0.001\nofficial.me_tweets x 1 = $0.001\nofficial.me_mentions x 1 = $0.010\ntotal: $0.012",
+    "notes": ["no prior snapshot — deltas available from tomorrow"]
+  },
+  "tracker_events": []
+}

@@ -1,0 +1,33 @@
+{
+  "pulse_data": {
+    "today": "2026-05-16",
+    "own_handle": "p2_heavy_replier",
+    "own_tweets": [
+      {"id": "fixture_p2_001", "text": "@some_founder 你完全没理解token的核心问题，分配机制根本就是错的", "created_at": "2026-05-16T03:00:00+00:00", "like_count": 0, "retweet_count": 0, "reply_count": 4, "impression_count": 412, "quote_count": 0, "owned": true},
+      {"id": "fixture_p2_002", "text": "@another_kol 这种说法太天真了 staking yield不可能持续", "created_at": "2026-05-16T05:30:00+00:00", "like_count": 1, "retweet_count": 0, "reply_count": 6, "impression_count": 388, "quote_count": 0, "owned": true},
+      {"id": "fixture_p2_003", "text": "@third_voice 楼上说的对，但忽略了流动性的问题", "created_at": "2026-05-16T08:15:00+00:00", "like_count": 0, "retweet_count": 0, "reply_count": 3, "impression_count": 201, "quote_count": 0, "owned": true},
+      {"id": "fixture_p2_004", "text": "@fourth_handle 不同意 这个机制最大问题在于早期参与者", "created_at": "2026-05-16T11:42:00+00:00", "like_count": 0, "retweet_count": 0, "reply_count": 5, "impression_count": 277, "quote_count": 0, "owned": true},
+      {"id": "fixture_p2_005", "text": "@fifth 同意，但要补充一点，这个模型在熊市完全跑不通", "created_at": "2026-05-16T13:11:00+00:00", "like_count": 2, "retweet_count": 0, "reply_count": 1, "impression_count": 144, "quote_count": 0, "owned": true},
+      {"id": "fixture_p2_006", "text": "新token设计的三个常见陷阱：1.分配集中 2.解锁悬崖 3.缺乏价值捕获", "created_at": "2026-05-16T16:20:00+00:00", "like_count": 4, "retweet_count": 1, "reply_count": 8, "impression_count": 1820, "quote_count": 0, "owned": true},
+      {"id": "fixture_p2_007", "text": "如果你的token没有现金流回购机制，分红就只是emission rebrand而已", "created_at": "2026-05-16T19:00:00+00:00", "like_count": 1, "retweet_count": 0, "reply_count": 5, "impression_count": 1102, "quote_count": 0, "owned": true}
+    ],
+    "own_mentions": {
+      "data": [
+        {"id": "ment_001", "text": "@p2_heavy_replier 你刚才说的那个解锁悬崖具体指什么？", "author_id": "u_001", "created_at": "2026-05-16T17:00:00+00:00"},
+        {"id": "ment_002", "text": "@p2_heavy_replier 你这观点我同意 但buyback真的可持续吗", "author_id": "u_002", "created_at": "2026-05-16T19:30:00+00:00"}
+      ],
+      "includes": {
+        "users": [
+          {"id": "u_001", "username": "asker_one", "public_metrics": {"followers_count": 8400}},
+          {"id": "u_002", "username": "asker_two", "public_metrics": {"followers_count": 14200}}
+        ]
+      }
+    },
+    "kol_rows": [],
+    "viral_posts": [],
+    "failures": [],
+    "cost_summary": "total: $0.038",
+    "notes": []
+  },
+  "tracker_events": []
+}

@@ -1,0 +1,52 @@
+{
+  "pulse_data": {
+    "today": "2026-05-16",
+    "own_handle": "p3_burst_poster",
+    "own_tweets": [
+      {"id": "fixture_p3_001", "text": "Just shipped a new feature for the framework. Linking to the announcement.", "created_at": "2026-05-16T07:00:00+00:00", "like_count": 12, "retweet_count": 3, "reply_count": 1, "impression_count": 4210, "quote_count": 0, "owned": true},
+      {"id": "fixture_p3_002", "text": "Hot take: most onchain governance is theater. Here's why the data backs that up.", "created_at": "2026-05-16T08:30:00+00:00", "like_count": 22, "retweet_count": 5, "reply_count": 4, "impression_count": 8120, "quote_count": 0, "owned": true},
+      {"id": "fixture_p3_003", "text": "Reading through Phoenix retrieval today and the dual-tower setup is more elegant than I thought.", "created_at": "2026-05-16T10:15:00+00:00", "like_count": 8, "retweet_count": 1, "reply_count": 0, "impression_count": 2300, "quote_count": 0, "owned": true},
+      {"id": "fixture_p3_004", "text": "Quick thread coming on stablecoin yield mechanics. Three buckets matter and the third is underrated.", "created_at": "2026-05-16T13:00:00+00:00", "like_count": 15, "retweet_count": 2, "reply_count": 2, "impression_count": 3900, "quote_count": 0, "owned": true},
+      {"id": "fixture_p3_005", "text": "Anyone else notice that the for-you feed has gotten noticeably quieter on dev-tooling content?", "created_at": "2026-05-16T16:45:00+00:00", "like_count": 6, "retweet_count": 0, "reply_count": 3, "impression_count": 1800, "quote_count": 0, "owned": true},
+      {"id": "fixture_p3_006", "text": "Same point, different angle: if your token has no in-network amplification, OON penalty crushes you.", "created_at": "2026-05-16T19:20:00+00:00", "like_count": 4, "retweet_count": 1, "reply_count": 1, "impression_count": 1200, "quote_count": 0, "owned": true}
+    ],
+    "own_mentions": {
+      "data": [
+        {"id": "ment_p3_001", "text": "@p3_burst_poster great thread, do you have a writeup?", "author_id": "u_p3_001", "created_at": "2026-05-16T14:00:00+00:00"},
+        {"id": "ment_p3_002", "text": "@p3_burst_poster what's your take on the new mechanism?", "author_id": "u_p3_002", "created_at": "2026-05-16T17:00:00+00:00"},
+        {"id": "ment_p3_003", "text": "@p3_burst_poster you should write a long-form on this", "author_id": "u_p3_003", "created_at": "2026-05-16T18:30:00+00:00"}
+      ],
+      "includes": {
+        "users": [
+          {"id": "u_p3_001", "username": "engaged_reader", "public_metrics": {"followers_count": 3200}},
+          {"id": "u_p3_002", "username": "another_voice", "public_metrics": {"followers_count": 11500}},
+          {"id": "u_p3_003", "username": "long_form_fan", "public_metrics": {"followers_count": 28000}}
+        ]
+      }
+    },
+    "kol_rows": [],
+    "viral_posts": [],
+    "failures": [],
+    "cost_summary": "total: $0.034",
+    "notes": []
+  },
+  "tracker_events": [
+    {"ts": "2026-05-10T09:00:00+00:00", "tweet_id": "hist_001", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 180},
+    {"ts": "2026-05-10T15:00:00+00:00", "tweet_id": "hist_002", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 210},
+    {"ts": "2026-05-11T08:00:00+00:00", "tweet_id": "hist_003", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 175},
+    {"ts": "2026-05-11T13:00:00+00:00", "tweet_id": "hist_004", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 192},
+    {"ts": "2026-05-12T10:00:00+00:00", "tweet_id": "hist_005", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 205},
+    {"ts": "2026-05-13T11:00:00+00:00", "tweet_id": "hist_006", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 188},
+    {"ts": "2026-05-14T12:00:00+00:00", "tweet_id": "hist_007", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 195},
+    {"ts": "2026-05-14T19:00:00+00:00", "tweet_id": "hist_008", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 168},
+    {"ts": "2026-05-15T09:00:00+00:00", "tweet_id": "hist_009", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 230},
+    {"ts": "2026-05-15T14:00:00+00:00", "tweet_id": "hist_010", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 220},
+    {"ts": "2026-05-15T18:00:00+00:00", "tweet_id": "hist_011", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 175},
+    {"ts": "2026-05-16T07:00:00+00:00", "tweet_id": "fixture_p3_001", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 180},
+    {"ts": "2026-05-16T08:30:00+00:00", "tweet_id": "fixture_p3_002", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 195},
+    {"ts": "2026-05-16T10:15:00+00:00", "tweet_id": "fixture_p3_003", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 188},
+    {"ts": "2026-05-16T13:00:00+00:00", "tweet_id": "fixture_p3_004", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 210},
+    {"ts": "2026-05-16T16:45:00+00:00", "tweet_id": "fixture_p3_005", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 175},
+    {"ts": "2026-05-16T19:20:00+00:00", "tweet_id": "fixture_p3_006", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 192}
+  ]
+}
