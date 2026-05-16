@@ -4,6 +4,8 @@
 state/oauth_tokens.json
 state/xapi_endpoint_shape.json
 state/kol_snapshot_*.json
+state/weekly_tracker.json
+state/tail_metrics_*.json
 
 # --- User's personal KOL list (template ships as kol_list.example.md) ---
 kol_list.md

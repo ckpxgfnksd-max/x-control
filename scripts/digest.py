@@ -147,6 +147,25 @@ def _today_decision(data: "PulseData") -> list[str]:
         if gaps:
             parts.append("**Tomorrow's gap:** " + "; ".join(gaps) + ".")
 
+    # 6) 7-day format gaps (algo: VQV reward + Premium long-form lane)
+    try:
+        from .tracker import events_in_last
+        from collections import Counter
+        week = events_in_last(24 * 7)
+        if week:
+            fmt = Counter(e["format"] for e in week)
+            week_gaps = []
+            if fmt.get("video", 0) == 0:
+                week_gaps.append("0 video posts in 7d — `VQV_WEIGHT` (`weighted_scorer.rs:72-80`) is an unused lane")
+            if fmt.get("longform", 0) == 0:
+                week_gaps.append("0 long-form posts in 7d — Premium long-form is a distinct surface")
+            if fmt.get("thread", 0) == 0:
+                week_gaps.append("0 threads in 7d — threads = one author event, 5-10× typical reach")
+            if week_gaps:
+                parts.append("**7-day format gap:** " + "; ".join(week_gaps) + ".")
+    except Exception:
+        pass  # tracker may not exist yet on first run
+
     return parts
 
 
@@ -373,6 +392,29 @@ def render(data: "PulseData") -> str:
             )
             lines.append(f"[{_short(t.get('text', ''), 240)}]({v['url']})")
     lines.append("")
+
+    # ---- weekly tracker rollup ----
+    try:
+        from .tracker import events_in_last
+        from collections import Counter
+        week = events_in_last(24 * 7)
+        if week:
+            fmt = Counter(e["format"] for e in week)
+            lang = Counter(e["lang"] for e in week)
+            lines.append("## 7-day ship log")
+            fmt_str = " · ".join(f"{n} {k}" for k, n in fmt.most_common())
+            lang_str = " · ".join(f"{n} {k}" for k, n in lang.most_common())
+            lines.append(f"_{len(week)} ships this week — format: {fmt_str} | lang: {lang_str}_")
+            # Specialty drift: Shannon entropy of first-word-of-tweet (proxy for topic)
+            import re as _re, math as _math
+            firsts = []
+            for e in week:
+                # No tweet text in event; use char_count buckets as a crude proxy
+                # Better: future version stores topic tags. For now skip if no text.
+                pass
+            lines.append("")
+    except Exception:
+        pass
 
     # ---- footer ----
     lines.append("---")

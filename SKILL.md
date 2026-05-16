@@ -45,6 +45,10 @@ description: Daily X pulse (own engagement + mentions + KOL signals) and approva
 | `python scripts/approve.py` | Interactive draft approval → post via OAuth |
 | `python scripts/approve.py --list` | Show pending drafts without acting |
 | `python scripts/approve.py --delete <tweet_id>` | Undo a published tweet |
+| `python scripts/approve.py --override` | Bypass `AuthorDiversityDecay` hard caps (3 standalones/24h, 2 replies/24h) for this run |
+| `python scripts/diagnose.py` | Algo-grounded diagnosis: coverage audit + account state + ranked suggestions. Re-runnable. |
+| `python scripts/weekly_review.py` | Sunday rollup: 7-day format/lang mix + 80h-tail check on still-rankable tweets + next-week priorities |
+| `python scripts/tracker.py` | Print current 24h cap counters (standalones, replies, threads, EN) |
 | `python scripts/serve.py` | Host the dashboard locally at http://localhost:8787 (Ctrl-C to stop) |
 | `python scripts/serve.py --no-open 8000` | Same, custom port, don't auto-open browser |
 
@@ -106,3 +110,31 @@ Stop: `launchctl unload ~/Library/LaunchAgents/club.cbti.x-control-dashboard.pli
 ## Phase 2 — likes / follows / quote-tweets
 
 Self-serve official API removed these endpoints in April 2026. The pulse highlights candidate targets in the "Viral KOL posts" and "Unanswered mentions" sections so you can click them on x.com. If you ever want automation, the plan file's Phase 2 section lays out the three options (manual / browser automation / wait for X). Recommendation is start manual, revisit after 30 days of pulse data.
+
+## For other users — install in 5 steps
+
+Want this on your own account? It's a normal Python skill:
+
+```bash
+git clone <repo-url> ~/.claude/skills/x-control
+cd ~/.claude/skills/x-control
+python3 -m venv .venv
+.venv/bin/pip install httpx python-dotenv click pyyaml
+cp kol_list.example.md kol_list.md       # edit YOUR_HANDLE + your KOLs
+```
+
+Then follow **Initial setup** above (steps 2-6). Total time: ~10 min including the OAuth-app creation at developer.x.com (free).
+
+### What you get on day one
+- `x-pulse-<today>.md` and `.html` — daily algo-aware brief on your engagement, mentions, and KOL signals
+- `algo-diagnosis-<today>.md` — re-runnable diagnostic with specific suggestions for your account
+- `weekly-review-<today>.md` (Sundays) — 7-day scorecard against the algo-aligned format/lang targets
+- Hard caps on burst-posting (3 standalones/24h, 2 replies/24h) auto-enforced when you approve drafts
+
+### What you bring
+- X account cookies (`AUTH_TOKEN`, `CT0`) for KOL reads — free, you already have them in your browser
+- An X OAuth 2.0 app (Confidential client) for posting from your account — free at developer.x.com, ~3 min to register
+- A KOL handle list — replace the seed list in `kol_list.example.md` with accounts in your niche
+
+### Cost
+~$10-15/month at typical usage (5 posts/day + 60 owned-reads + 20 mention-reads). KOL reads are free (cookies, not API). Hard cap at `MAX_DAILY_API_SPEND_USD` in `.env`.

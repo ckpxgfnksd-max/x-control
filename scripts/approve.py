@@ -16,8 +16,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts import queue                                        # noqa: E402
+from scripts import tracker                                      # noqa: E402
 from scripts.cost import CostTracker                             # noqa: E402
 from scripts.clients.official import OfficialXClient             # noqa: E402
+
+# Hard caps per algo: AuthorDiversityDecay exponential decay > 3 standalones/24h.
+HARD_CAP_STANDALONES_24H = 3
+HARD_CAP_REPLIES_24H = 2
 
 ENV_PATH = Path.home() / ".config" / "x-control" / ".env"
 
@@ -94,10 +99,37 @@ def _post(d: queue.Draft, client: OfficialXClient) -> list[str]:
     return ids
 
 
-def _approve_one(d: queue.Draft, client: OfficialXClient, auto: bool) -> str:
-    """Returns 'approved' | 'rejected' | 'skipped' | 'quit' | 'edited'."""
+def _approve_one(
+    d: queue.Draft, client: OfficialXClient, auto: bool, override: bool = False
+) -> str:
+    """Returns 'approved' | 'rejected' | 'skipped' | 'quit' | 'edited' | 'capped'."""
     posted_4h = queue.posted_in_last(4)
     _show(d, posted_4h)
+
+    # ---- Hard caps (algo-aligned) -------------------------------------------
+    is_reply = bool(d.in_reply_to) or (
+        len(d.tweets) == 1 and d.tweets[0].lstrip().startswith("@")
+    )
+    is_thread = len(d.tweets) > 1
+    standalones_24h = tracker.standalone_count_24h()
+    replies_24h = tracker.reply_count_24h()
+
+    if not is_thread:  # threads = one author event, never capped
+        if not is_reply and standalones_24h >= HARD_CAP_STANDALONES_24H and not override:
+            print(_red(
+                f"  HARD CAP: {standalones_24h} standalones in last 24h "
+                f"(limit {HARD_CAP_STANDALONES_24H}). AuthorDiversityDecay penalizes the next one."
+            ))
+            print(_dim("  Override with `python scripts/approve.py --override` (acknowledge the penalty)."))
+            print(_yellow("  Better: thread your next idea instead, or reply from your mentions queue."))
+            return "capped"
+        if is_reply and replies_24h >= HARD_CAP_REPLIES_24H and not override:
+            print(_red(
+                f"  HARD CAP: {replies_24h} replies in last 24h "
+                f"(limit {HARD_CAP_REPLIES_24H}). Reply quota spent."
+            ))
+            print(_dim("  Override with `--override` if this reply is high-leverage (e.g. >50k-follower mention)."))
+            return "capped"
     if auto:
         choice = "a"
     else:
@@ -131,12 +163,21 @@ def _approve_one(d: queue.Draft, client: OfficialXClient, auto: bool) -> str:
             return "skipped"
         first_id = ids[0]
         url = f"https://x.com/i/web/status/{first_id}"
+        # Record the ship for the weekly tracker (powers digest gap detection)
+        ship_event = tracker.record_ship(
+            tweet_id=first_id, tweets=d.tweets, is_reply=is_reply,
+        )
         queue.archive(d, "posted", {
             "tweet_id": first_id,
             "tweet_ids": ids,
             "tweet_url": url,
+            "format": ship_event["format"],
+            "lang": ship_event["lang"],
         })
-        print(_green(f"  → posted {url} ({len(ids)} tweet{'s' if len(ids) > 1 else ''})"))
+        print(_green(
+            f"  → posted {url} ({len(ids)} tweet{'s' if len(ids) > 1 else ''}) "
+            f"[{ship_event['format']}/{ship_event['lang']}]"
+        ))
         return "approved"
     print(_dim(f"  unknown choice: {choice!r}"))
     return "skipped"
@@ -147,6 +188,8 @@ def main() -> int:
     ap.add_argument("--list", action="store_true", help="show pending drafts and exit")
     ap.add_argument("--auto", action="store_true", help="approve everything (advanced — use with care)")
     ap.add_argument("--delete", help="delete a published tweet by id")
+    ap.add_argument("--override", action="store_true",
+                    help="bypass hard caps (standalones ≥3/24h, replies ≥2/24h) for this run")
     args = ap.parse_args()
 
     load_dotenv(ENV_PATH)
@@ -187,12 +230,12 @@ def main() -> int:
         client_secret=os.environ.get("X_OAUTH_CLIENT_SECRET", ""),
         cost=cost,
     )
-    counts = {"approved": 0, "rejected": 0, "skipped": 0, "edited": 0}
+    counts = {"approved": 0, "rejected": 0, "skipped": 0, "edited": 0, "capped": 0}
     try:
         for d in drafts:
             # Edit loop: stay on the same draft after an edit
             while True:
-                result = _approve_one(d, client, auto=args.auto)
+                result = _approve_one(d, client, auto=args.auto, override=args.override)
                 if result == "quit":
                     print(cost.summary())
                     return 0
