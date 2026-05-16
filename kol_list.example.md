@@ -2,6 +2,8 @@
 
 Copy this to `kol_list.md` and edit. `monitor.py` reads `kol_list.md` first, falls back to this `kol_list.example.md` if missing.
 
+> Seed list reflects a crypto / DeFi / AI niche — swap rows for accounts in your own domain.
+
 The `own` row is special — it's the only row read via the official X API (everything else routes through xapi.to). Replace `YOUR_HANDLE` with your X handle before the first real run.
 
 | handle           | category        | weight | note                                     |

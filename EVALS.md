@@ -18,9 +18,9 @@ Karpathy-style autoresearch cycle, 20 rounds, 2026-05-16. Target artifact: the d
 ### Personas
 | ID | Name | Question they answer |
 |---|---|---|
-| P1 | **Glance-Chase** | "Can I extract today's posting decision in 30 seconds?" |
+| P1 | **Glance-User** | "Can I extract today's posting decision in 30 seconds?" |
 | P2 | **Brief-LLM** | "Can I infer 3 distinct hook angles directly from this?" |
-| P3 | **Archive-Chase** | "Can I reconstruct what was worth attention without clicking through?" |
+| P3 | **Archive-User** | "Can I reconstruct what was worth attention without clicking through?" |
 
 ## Scoring protocol
 
@@ -77,7 +77,7 @@ Karpathy-style autoresearch cycle, 20 rounds, 2026-05-16. Target artifact: the d
 
 ## What clearly worked (per round-20 grader)
 
-1. **"Today's posting decision" lede** — converts the whole report into 3 verbs (Hold / Reply @ccy1871 / EN long-form gap). P1 can stop reading after line 8.
+1. **"Today's posting decision" lede** — converts the whole report into 3 verbs (Hold / Reply to top_mention / EN long-form gap). P1 can stop reading after line 8.
 2. **Status line + algo file:line citations** — `status: own ✓ 7 · mentions ✓ 20 · KOLs ✓ 15` collapses failure transparency into one row, and `ranking_scorer.rs:195-196` makes every flag traceable. D5 and D3 both move from folklore to verifiable.
 3. **Compression** — KOL block went from 15-line dump to 3 movers + bucketed quiet count; metadata dedup'd to `× 15`. Same information, ~40% fewer lines.
 
@@ -86,7 +86,7 @@ Karpathy-style autoresearch cycle, 20 rounds, 2026-05-16. Target artifact: the d
 - **D4 P1/P3 still 7** — brief has hook *seeds* but no labeled "3 named angles" block. A `## Hook seeds` section with topic tags would push to 9+.
 - **No deltas yet** — entire report is baseline (first day of state). First diff-aware day will lift D2/D3 archive scores.
 - **Topic-tag extraction missing** — "Topics to NOT repeat" shows tweet snippets, not extracted themes. Hard without an LLM pass.
-- **Reply-rank formula opaque** — "ranked by reach × recency" cites the formula in code but not in the rendered output. Show the composite score so Archive-Chase can audit in 2 months.
+- **Reply-rank formula opaque** — "ranked by reach × recency" cites the formula in code but not in the rendered output. Show the composite score so Archive-User can audit in 2 months.
 
 ## Artifacts
 

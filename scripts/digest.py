@@ -143,7 +143,7 @@ def _today_decision(data: "PulseData") -> list[str]:
         if feats["with_link"] == 0 and len(data.own_tweets) >= 3:
             gaps.append("0 link-bearing posts (reach -30-50% folklore aside, links lower OON-trapped risk per `oon_scorer.rs:21` since they pull in-network clicks)")
         if feats["avg_likes"] < 1 and len(data.own_tweets) >= 3:
-            gaps.append("avg <1❤ across posts — angle is missing in-network resonance; brief should index harder on your distinctive ex-Binance angle")
+            gaps.append("avg <1❤ across posts — angle is missing in-network resonance; brief should index harder on your distinctive expertise angle")
         if gaps:
             parts.append("**Tomorrow's gap:** " + "; ".join(gaps) + ".")
 
