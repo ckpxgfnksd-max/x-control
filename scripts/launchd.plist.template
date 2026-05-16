@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  x-control dashboard auto-start at login.
+
+  Install (one-time):
+    HOME_DIR=$HOME
+    sed "s|HOME_DIR_PLACEHOLDER|$HOME_DIR|g" \
+        ~/.claude/skills/x-control/scripts/launchd.plist.template \
+        > ~/Library/LaunchAgents/club.cbti.x-control-dashboard.plist
+    launchctl load ~/Library/LaunchAgents/club.cbti.x-control-dashboard.plist
+
+  Open the dashboard:
+    open http://localhost:8787
+
+  Stop / uninstall:
+    launchctl unload ~/Library/LaunchAgents/club.cbti.x-control-dashboard.plist
+    rm ~/Library/LaunchAgents/club.cbti.x-control-dashboard.plist
+
+  Logs:
+    tail -f /tmp/x-control-dashboard.{out,err}.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>club.cbti.x-control-dashboard</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>HOME_DIR_PLACEHOLDER/.claude/skills/x-control/.venv/bin/python</string>
+        <string>HOME_DIR_PLACEHOLDER/.claude/skills/x-control/scripts/serve.py</string>
+        <string>--no-open</string>
+        <string>8787</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>HOME_DIR_PLACEHOLDER/.claude/skills/x-control</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/x-control-dashboard.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/tmp/x-control-dashboard.err.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
