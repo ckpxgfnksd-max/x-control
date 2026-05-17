@@ -161,7 +161,7 @@ def dwell_potential(text: str, tweet_count: int) -> Signal:
 
 
 def profile_click_pull(text: str, identity_hints: Iterable[str]) -> Signal:
-    """Maps to `profile_click` head. Identity teases ("ex-Binance...", "I
+    """Maps to `profile_click` head. Identity teases ("ex-<bigco>...", "I
     spent 5 years building X") pull viewers to your profile — but only if
     the draft frontmatter actually declares identity_hints. No declared
     identity → assume the draft does not lean on this lever.

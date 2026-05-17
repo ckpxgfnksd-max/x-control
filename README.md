@@ -140,7 +140,7 @@ ranker's structure (`home-mixer/scorers/ranking_scorer.rs`):
 | `repostability` | `retweet` + `share_via_*` | quotable claim length 80–240, declarative, no hedging, optional contrarian frame |
 | `reply-worthiness` | `reply` | open question at end OR contrarian framing (cross-checked against engagement-bait risk) |
 | `dwell-potential` | `dwell` + `dwell_time` + `click_dwell_time` | thread length, multi-line structure, embedded numbers/data |
-| `profile-click-pull` | `profile_click` | identity tease ("ex-Binance", "I built X") + declared `identity_hints` frontmatter |
+| `profile-click-pull` | `profile_click` | identity tease ("ex-$BIG_CO", "I built $X") + declared `identity_hints` frontmatter |
 | `follow-author-reason` | `follow_author` | series markers ("part 2/5", "weekly") and recurring-value signals |
 | `topic-fit` | inverse `TopicOonWeightFactor` | frontmatter `topic_tags` overlap with your last-30-day topic mix |
 | `neg-feedback-risk` | `not_interested` + `block` + `mute` + `report` + `not_dwelled` | high/med/low rollup of `queue.risk_markers()` |
@@ -153,7 +153,7 @@ angle_type: contrarian        # hook | explainer | take | contrarian | data | st
 audience_pool: in_network     # in_network | OON | topic
 format_goal: profile_clicks   # impressions | replies | profile_clicks | follow | dwell
 experiment_label: cn-thread-v2
-identity_hints: ["ex-Binance listing", "TLS builder"]
+identity_hints: ["<your-identity-tease-1>", "<your-identity-tease-2>"]
 ```
 
 All fields are optional; old drafts continue to load unchanged. Tracker stores these per-ship, so `diagnose.py` can flag monoculture (S19) and `weekly_review.py` can summarize experiment performance (S20).

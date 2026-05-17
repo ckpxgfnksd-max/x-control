@@ -54,8 +54,8 @@ def test_profile_click_no_hints():
 
 def test_profile_click_matched_hint():
     s = signals.profile_click_pull(
-        "Ex-Binance listing team here — the part exchanges never explain about your token review.",
-        identity_hints=["ex-Binance listing"],
+        "Former bigco-listings lead here — the part exchanges never explain about your token review.",
+        identity_hints=["former bigco-listings"],
     )
     assert s.score >= 0.5
     assert "identity" in s.reason.lower()
@@ -102,7 +102,7 @@ def test_score_draft_returns_seven_signals():
     panel = signals.score_draft(
         "Tokenomics has a 3-act structure. Part 1 of 3.",
         tweet_count=1,
-        frontmatter={"topic_tags": ["tokenomics"], "identity_hints": ["ex-Binance"]},
+        frontmatter={"topic_tags": ["tokenomics"], "identity_hints": ["former-role"]},
         own_topics=["tokenomics", "defi"],
         risk_markers=[],
     )
