@@ -17,7 +17,9 @@ ENV.parent.mkdir(parents=True, exist_ok=True)
 os.chmod(ENV.parent, 0o700)
 
 FIELDS = [
-    ("XAPI_API_KEY",          "xapi.to API key"),
+    # XAPI_API_KEY: legacy no-op slot, kept so older .env files don't error on
+    # load. KOL reads use bird-search via /last30days cookies. Leave blank.
+    ("XAPI_API_KEY",          "XAPI_API_KEY (legacy, leave blank)"),
     ("X_OAUTH_CLIENT_ID",     "X OAuth 2.0 Client ID"),
     ("X_OAUTH_CLIENT_SECRET", "X OAuth 2.0 Client Secret"),
 ]
@@ -80,9 +82,11 @@ def main() -> int:
         print(f"  {k}: {status}")
     print(f"  MAX_DAILY_API_SPEND_USD: {out.get('MAX_DAILY_API_SPEND_USD', '(unset)')}")
     print()
-    missing = [k for k, _ in FIELDS if not out.get(k)]
+    # XAPI_API_KEY is legacy and OK to leave blank; only treat OAuth pair as required.
+    required = ("X_OAUTH_CLIENT_ID", "X_OAUTH_CLIENT_SECRET")
+    missing = [k for k in required if not out.get(k)]
     if missing:
-        print(f"⚠  {len(missing)} field(s) still missing. Re-run when you have them.")
+        print(f"⚠  {len(missing)} required field(s) still missing: {', '.join(missing)}.")
         return 1
     print("All credentials present. Next step:")
     print(f"  {Path(__file__).parent.parent}/.venv/bin/python "

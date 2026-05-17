@@ -1,6 +1,6 @@
 ---
 name: x-control
-description: Daily X pulse (own engagement + mentions + KOL signals) and approval-gated posting/replying via the official X API. Use when the user says "x pulse", "x control", "x dashboard", "check my X", "approve tweets", "post to X", "reply to mentions", "what should I post", "x engagement check", "did my tweet flop", or "draft a thread for X". Surfaces algorithm-aware warnings (OON-trapped tweets, AuthorDiversityDecay burst, negative-feedback risk markers) grounded in the open xai-org/x-algorithm Rust source. Hybrid stack: official X API (OAuth) for own account + writes; bundled bird-search (cookies) for KOL reads — no third-party gateway.
+description: Daily X pulse (own engagement + mentions + KOL signals + 24-80h tail) and approval-gated posting/replying via the official X API. Use when the user says "x pulse", "x control", "x dashboard", "check my X", "approve tweets", "post to X", "reply to mentions", "what should I post", "should I post this", "what's this draft's reach potential", "x engagement check", "did my tweet flop", "follow up on yesterday's thread", or "draft a thread for X". Surfaces both impression-lift signals (per-head check against ranking_scorer.rs heads: retweet, reply, dwell, profile_click, follow_author, TopicOonWeightFactor) and algorithm-aware warnings (OON-trap, AuthorDiversityDecay burst, negative-feedback risk markers) grounded in the open xai-org/x-algorithm Rust source. Hybrid stack: official X API (OAuth) for own account + writes; bundled bird-search (cookies) for KOL reads — no third-party gateway.
 ---
 
 # x-control
@@ -13,14 +13,20 @@ description: Daily X pulse (own engagement + mentions + KOL signals) and approva
 2. **KOL posting velocity** (bird-search via your last30days cookies): tweets/24h per KOL with day-over-day delta and ratio; flags KOLs whose posting rate jumped ≥1.5× and +3 tweets (attention shift / something brewing).
 3. **Viral KOL posts** (bird-search): tweets in last 24h exceeding ≥500 likes OR ≥100 replies. (Bird does not expose quote counts or follower counts, so those signals are out of scope.)
 
-**Post queue** at `queue/pending/` — markdown drafts with YAML frontmatter. An interactive CLI walks each draft, flags algorithm-aware risks (engagement bait, callouts of named accounts, AI-slop openers, em-dash overuse, emoji spam, URL inclusion, burst warning if you posted ≥2 standalone tweets in the last 4h), and on `[a]pprove` posts via the official API.
+**Post queue** at `queue/pending/` — markdown drafts with YAML frontmatter. An interactive CLI walks each draft and shows:
+
+1. **Impression-lift signals** per `ranking_scorer.rs` head: `repostability`, `reply-worthiness`, `dwell-potential`, `profile-click-pull`, `follow-author-reason`, `topic-fit`. Read-only display so the user can see *which axis* the draft optimizes for; no auto-approval.
+2. **Risk markers** mapping to negative-feedback heads (`not_interested` / `block` / `mute` / `report`): engagement bait, callouts of named accounts, AI-slop openers, em-dash overuse, emoji spam, URL inclusion, plus a burst warning if ≥2 standalone tweets shipped in the last 4h.
+3. **Optional authoring intent** from frontmatter (`topic_tags`, `angle_type`, `audience_pool`, `format_goal`, `experiment_label`, `identity_hints`) — tracker stores these per ship so `diagnose.py` can flag angle monoculture (S19) and experiment maturity (S20).
+
+On `[a]pprove`, posts via the official API.
 
 ## Success criteria
 
 - Pulse generates daily before your brief workflow runs
 - Day-2 onward shows non-zero follower deltas (state persistence works)
 - Approval CLI never auto-posts; every write requires explicit `[a]pprove` keypress
-- xapi.to outage does NOT block the own-account section (graceful degradation)
+- KOL fetch failure (bird-search down or cookies expired) does NOT block the own-account section (graceful degradation)
 - Total monthly spend < your `MAX_DAILY_API_SPEND_USD × 30` cap
 
 ## Constraints (do NOT cross)
@@ -40,7 +46,7 @@ description: Daily X pulse (own engagement + mentions + KOL signals) and approva
 | `python scripts/auth.py` | One-time OAuth 2.0 setup (opens browser, captures tokens) |
 | `python scripts/monitor.py` | Generate today's pulse |
 | `python scripts/monitor.py --dry-run` | Print planned calls, no network |
-| `python scripts/monitor.py --skip-kols` | Own-account section only (no xapi.to) |
+| `python scripts/monitor.py --skip-kols` | Own-account section only; skips bird-search KOL fetches |
 | `python scripts/monitor.py --only @handle` | Limit KOL fan-out to one handle |
 | `python scripts/approve.py` | Interactive draft approval → post via OAuth |
 | `python scripts/approve.py --list` | Show pending drafts without acting |
@@ -89,7 +95,7 @@ Stop: `launchctl unload ~/Library/LaunchAgents/club.cbti.x-control-dashboard.pli
    ```bash
    python scripts/setup_env.py
    ```
-   Hidden-input prompts for the OAuth Client ID + Client Secret. (The XAPI_API_KEY field is legacy and can be left blank — the current build uses bird-search instead.) Writes `~/.config/x-control/.env` atomically, mode 0600.
+   Hidden-input prompts for the OAuth Client ID + Client Secret. (The `XAPI_API_KEY` field is a no-op kept only so older `.env` files don't error on load — KOL reads use bird-search via your /last30days cookies. Leave it blank.) Writes `~/.config/x-control/.env` atomically, mode 0600.
 4. **Run OAuth flow** (browser opens for consent, tokens persist to `state/oauth_tokens.json` mode 0600):
    ```bash
    python scripts/auth.py

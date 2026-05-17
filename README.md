@@ -2,7 +2,7 @@
 
 **Manage your X account via Claude.** Daily pulse on your own engagement + KOL signals (posting velocity, viral posts), and approval-gated posting/replying via the official X API. Read-side is hybrid: official API for everything that touches your account, the bundled bird-search (cookies, free) for KOL reads — no third-party API gateway.
 
-Algorithm-aware: risk markers and the OON-trap / author-diversity-decay warnings are derived from the open [xai-org/x-algorithm](https://github.com/xai-org/x-algorithm) Rust source, not creator folklore.
+Algorithm-aware: both the **negative** signals (OON-trap, AuthorDiversityDecay, risk markers tied to `not_interested`/`block`/`mute`/`report` heads) and **positive** signals (per-head impression-lift checks for `retweet`, `reply`, `dwell`, `profile_click`, `follow_author`, `TopicOonWeightFactor`) are derived from the open [xai-org/x-algorithm](https://github.com/xai-org/x-algorithm) Rust source, not creator folklore. Numeric weights live in stripped params modules, so the panel surfaces *which heads a draft plausibly activates* rather than predicting magnitudes.
 
 ## Design choices
 
@@ -67,9 +67,9 @@ Go to https://developer.x.com/en/portal/dashboard:
 .venv/bin/python scripts/setup_env.py
 ```
 
-Three hidden prompts (XAPI_API_KEY can be left blank in this build — see note below; OAuth Client ID; OAuth Client Secret). Pasted values are not echoed and never enter your shell history. The script atomically writes `~/.config/x-control/.env` with mode 0600.
+Three hidden prompts (OAuth Client ID; OAuth Client Secret; an unused legacy slot — see note below). Pasted values are not echoed and never enter your shell history. The script atomically writes `~/.config/x-control/.env` with mode 0600.
 
-> The XAPI_API_KEY field is legacy. The current build uses bird-search instead of xapi.to. You can leave the field blank, or remove it from `setup_env.py`'s FIELDS list.
+> The `XAPI_API_KEY` field is a no-op kept only so older `.env` files don't error on load. KOL reads use bird-search via your /last30days cookies; leave the field blank or delete it from your `.env`. The line will be removed from `setup_env.py` in a future release.
 
 ### 4. Run OAuth and verify
 
@@ -108,7 +108,7 @@ Output lands at `~/Documents/Last30Days/x-pulse-YYYY-MM-DD.md`.
 | `python scripts/auth.py` | One-time OAuth 2.0 setup (opens browser) |
 | `python scripts/monitor.py` | Generate today's pulse |
 | `python scripts/monitor.py --dry-run` | Print planned calls, no network |
-| `python scripts/monitor.py --skip-kols` | Own-account section only (no xapi.to) |
+| `python scripts/monitor.py --skip-kols` | Own-account section only; skips bird-search KOL fetches |
 | `python scripts/monitor.py --only @handle` | Limit KOL fan-out to one handle |
 | `python scripts/approve.py` | Interactive draft approval → post via OAuth |
 | `python scripts/approve.py --list` | Show pending drafts without acting |
@@ -129,6 +129,44 @@ Or host locally with a stable URL:
 ```
 
 The local server injects a refresh button that re-runs `monitor.py` on click. To auto-start on login, install the launchd template at `scripts/launchd.plist.template` — see SKILL.md for the one-liner.
+
+## Impression-lift signals in the approval CLI
+
+For every draft, `approve.py` renders a per-head signal panel mirroring the
+ranker's structure (`home-mixer/scorers/ranking_scorer.rs`):
+
+| Signal | Maps to head | Heuristic check |
+|---|---|---|
+| `repostability` | `retweet` + `share_via_*` | quotable claim length 80–240, declarative, no hedging, optional contrarian frame |
+| `reply-worthiness` | `reply` | open question at end OR contrarian framing (cross-checked against engagement-bait risk) |
+| `dwell-potential` | `dwell` + `dwell_time` + `click_dwell_time` | thread length, multi-line structure, embedded numbers/data |
+| `profile-click-pull` | `profile_click` | identity tease ("ex-Binance", "I built X") + declared `identity_hints` frontmatter |
+| `follow-author-reason` | `follow_author` | series markers ("part 2/5", "weekly") and recurring-value signals |
+| `topic-fit` | inverse `TopicOonWeightFactor` | frontmatter `topic_tags` overlap with your last-30-day topic mix |
+| `neg-feedback-risk` | `not_interested` + `block` + `mute` + `report` + `not_dwelled` | high/med/low rollup of `queue.risk_markers()` |
+
+Each draft can declare authoring intent in YAML frontmatter so the panel can reason about it:
+
+```yaml
+topic_tags: [tokenomics, defi]
+angle_type: contrarian        # hook | explainer | take | contrarian | data | story | joke
+audience_pool: in_network     # in_network | OON | topic
+format_goal: profile_clicks   # impressions | replies | profile_clicks | follow | dwell
+experiment_label: cn-thread-v2
+identity_hints: ["ex-Binance listing", "TLS builder"]
+```
+
+All fields are optional; old drafts continue to load unchanged. Tracker stores these per-ship, so `diagnose.py` can flag monoculture (S19) and `weekly_review.py` can summarize experiment performance (S20).
+
+## 24-80h tail in the daily pulse
+
+Tweets aged 24-80h are still in Phoenix's candidate pool (`POST_AGE_MAX_MINUTES=4800`, `phoenix/recsys_model.py:30`). The daily pulse now categorizes them into:
+
+- **growing** — gaining impressions or hitting ≥1.5% engagement rate → reply / follow-up
+- **needs-rework** — high reach, weak hook (≥2× median imps, <0.5% engagement) → re-angle
+- **dead** — low reach, late (<0.5× median imps, ≥60h) → don't reuse
+
+Snapshots persist to `state/own_snapshot_YYYY-MM-DD.json` so day-over-day deltas drive the growing/declining classification. Cost: ~$0.005/day for the extra owned-read (well under `MAX_DAILY_API_SPEND_USD`).
 
 ## Risk markers in the approval CLI
 
