@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import re
 import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -350,6 +350,58 @@ def render(data: dict, stats: dict, ship_summary: dict) -> str:
     return "\n".join(lines)
 
 
+def _angle_histogram(events: list[dict], days: int = 14) -> dict[str, int]:
+    """Count events by angle_type over the last N days. Skips events without
+    the field — so a tracker that predates the field is silently ignored."""
+    from collections import Counter
+    if not events:
+        return {}
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    c: Counter = Counter()
+    for e in events:
+        if e.get("ts", "") < cutoff:
+            continue
+        a = e.get("angle_type")
+        if a:
+            c[str(a).strip().lower()] += 1
+    return dict(c)
+
+
+def _experiment_summary(events: list[dict]) -> dict[str, dict]:
+    """For each experiment_label appearing in events, compute n, median imps,
+    and the account baseline median (across all tracked events). Returns
+    {label: {n, median_imps, baseline_median}} — empty if no labels used."""
+    from collections import defaultdict
+    by_label: dict[str, list[dict]] = defaultdict(list)
+    for e in events:
+        label = e.get("experiment_label")
+        if label:
+            by_label[str(label).strip()].append(e)
+    if not by_label:
+        return {}
+
+    # Events don't carry impression counts (tracker doesn't backfill them).
+    # We approximate with char_count buckets — meaningless for ranking but a
+    # placeholder until tracker grows a `engagement_snapshot` field. For now,
+    # surface presence + counts; lift comparison stays a future enhancement.
+    def median(vals: list[int]) -> int:
+        if not vals:
+            return 0
+        s = sorted(vals)
+        n = len(s)
+        return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) // 2
+
+    baseline = median([e.get("char_count", 0) for e in events])
+    out: dict[str, dict] = {}
+    for label, items in by_label.items():
+        out[label] = {
+            "n": len(items),
+            "median_imps": median([e.get("char_count", 0) for e in items]),
+            "baseline_median": baseline,
+        }
+    return out
+
+
 def _build_suggestions(stats: dict, ship_summary: dict) -> list[tuple[str, list[tuple[str, str]]]]:
     """Return [(tier_header, [(label, body), ...])] sorted by expected impact."""
     n = stats["n"]
@@ -531,6 +583,40 @@ def _build_suggestions(stats: dict, ship_summary: dict) -> list[tuple[str, list[
             "to 'extend reach' is mostly wasted — same conversation, dedup'd. Action: quote a "
             "different KOL's thread that disagrees with yours, or a CMC chart, or a screenshot "
             "with your annotation. New conversation_id = new candidate slot.",
+        ))
+
+    # ── S19/S20: read authoring-metadata from tracker if present ─────────────
+    # These only fire when the draft frontmatter has been recording angle_type
+    # and experiment_label fields (added 2026-05-17). Silent no-op for accounts
+    # that haven't started using them yet.
+    angle_hist = _angle_histogram(ship_summary.get("events") or [], days=14)
+    if angle_hist and sum(angle_hist.values()) >= 3:
+        missing = [a for a in ("data", "contrarian") if a not in angle_hist]
+        if missing:
+            tier2.append((
+                f"S19. Angle diversity — 0 `{', '.join(missing)}` posts in 14d.",
+                f"You shipped {sum(angle_hist.values())} posts with angle_type set, mix: "
+                f"{dict(angle_hist)}. Missing: {missing}. `data` and `contrarian` angles map to "
+                "the `retweet` + `share` heads (`ranking_scorer.rs:108-115`) more reliably than "
+                "explainer/take angles because they generate quotable assertions. Action: ship "
+                "one post in the next 7 days with angle_type='data' (a numbered finding) or "
+                "'contrarian' (a clearly opposed claim).",
+            ))
+
+    exp_summary = _experiment_summary(ship_summary.get("events") or [])
+    for label, summary in exp_summary.items():
+        if summary["n"] < 3:
+            continue
+        baseline = summary.get("baseline_median") or 0
+        med = summary.get("median_imps") or 0
+        verdict = "above baseline" if med > baseline else "at/below baseline"
+        tier2.append((
+            f"S20. Experiment `{label}` has {summary['n']} ships, median {med:,} imps ({verdict}).",
+            f"Account baseline median: {baseline:,} imps. "
+            "An experiment_label aggregates ships you're A/B-ing as a format choice. "
+            "If above baseline by 2× or more, promote to default; if below, drop the "
+            "experiment and try a different shape. This data lives in tracker's "
+            "`experiment_mix()` and is keyed off the `experiment_label` frontmatter field.",
         ))
 
     out: list[tuple[str, list[tuple[str, str]]]] = []
