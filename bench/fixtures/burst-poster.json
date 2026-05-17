@@ -28,7 +28,12 @@
     "viral_posts": [],
     "failures": [],
     "cost_summary": "total: $0.034",
-    "notes": []
+    "notes": [],
+    "tail": [
+      {"id": "tail_p3_001", "text": "Tokenomics has a 3-act structure most token whitepapers skip. Here's what each does.", "created_at": "2026-05-14T17:00:00+00:00", "age_h": 38, "impression_count": 12400, "like_count": 180, "retweet_count": 32, "reply_count": 47, "owner_handle": "p3_burst_poster", "category": "growing"},
+      {"id": "tail_p3_002", "text": "Most $HYPE takes miss the obvious thing: the buyback is funded by perp fees, not equity.", "created_at": "2026-05-14T03:00:00+00:00", "age_h": 52, "impression_count": 9800, "like_count": 12, "retweet_count": 2, "reply_count": 14, "owner_handle": "p3_burst_poster", "category": "needs-rework"},
+      {"id": "tail_p3_003", "text": "Quick screenshot from today's Phoenix retrieval reading.", "created_at": "2026-05-13T13:00:00+00:00", "age_h": 66, "impression_count": 240, "like_count": 1, "retweet_count": 0, "reply_count": 0, "owner_handle": "p3_burst_poster", "category": "dead"}
+    ]
   },
   "tracker_events": [
     {"ts": "2026-05-10T09:00:00+00:00", "tweet_id": "hist_001", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 180},
@@ -45,8 +50,8 @@
     {"ts": "2026-05-16T07:00:00+00:00", "tweet_id": "fixture_p3_001", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 180},
     {"ts": "2026-05-16T08:30:00+00:00", "tweet_id": "fixture_p3_002", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 195},
     {"ts": "2026-05-16T10:15:00+00:00", "tweet_id": "fixture_p3_003", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 188},
-    {"ts": "2026-05-16T13:00:00+00:00", "tweet_id": "fixture_p3_004", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 210},
-    {"ts": "2026-05-16T16:45:00+00:00", "tweet_id": "fixture_p3_005", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 175},
-    {"ts": "2026-05-16T19:20:00+00:00", "tweet_id": "fixture_p3_006", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 192}
+    {"ts": "2026-05-16T13:00:00+00:00", "tweet_id": "fixture_p3_004", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 210, "topic_tags": ["defi"], "angle_type": "take", "experiment_label": "en-standalone-baseline"},
+    {"ts": "2026-05-16T16:45:00+00:00", "tweet_id": "fixture_p3_005", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 175, "topic_tags": ["defi"], "angle_type": "take", "experiment_label": "en-standalone-baseline"},
+    {"ts": "2026-05-16T19:20:00+00:00", "tweet_id": "fixture_p3_006", "format": "standalone", "lang": "en", "is_reply": false, "tweet_count": 1, "char_count": 192, "topic_tags": ["defi"], "angle_type": "take", "experiment_label": "en-standalone-baseline"}
   ]
 }

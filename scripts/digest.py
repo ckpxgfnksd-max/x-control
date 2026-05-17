@@ -56,6 +56,68 @@ def _own_tweet_line(t: dict, own: str) -> str:
     )
 
 
+def _tail_section(data: "PulseData") -> list[str]:
+    """Render the 24-80h tail (own tweets still in Phoenix candidate pool).
+    Empty groups are skipped; nothing is shown if there's no tail at all."""
+    tail = getattr(data, "tail", None) or []
+    if not tail:
+        return []
+    by_cat: dict[str, list[dict]] = {}
+    for t in tail:
+        by_cat.setdefault(t.get("category", "stable"), []).append(t)
+    own = data.own_handle or "you"
+
+    suggestion = {
+        "growing": "→ follow up (reply with the next angle, or quote this in the next post)",
+        "needs-rework": "→ re-hook (high reach, weak engagement — try a different opening)",
+        "dead": "→ don't reuse",
+        "stable": "→ holding pattern",
+    }
+    lines = [
+        "## 24-80h tail (still in candidate pool, `POST_AGE_MAX_MINUTES=4800`)",
+        "_Tweets aged 24-80h are still rankable per `phoenix/recsys_model.py:30`. "
+        "Categorized as: still gaining, high reach + weak engagement, or done._",
+        "",
+    ]
+    # Show in order: growing → needs-rework → stable → dead
+    for cat in ("growing", "needs-rework", "stable", "dead"):
+        bucket = by_cat.get(cat) or []
+        if not bucket:
+            continue
+        # Hide 'dead' bodies (don't reuse anyway) — just count + one example
+        if cat == "dead":
+            lines.append(f"### dead ({len(bucket)}) — see weekly review for full list")
+            t = bucket[0]
+            rate = _engagement_rate_pct(t)
+            lines.append(
+                f"- `[{int(t.get('age_h', 0))}h] {t.get('impression_count', 0):,} imps "
+                f"· {rate:.2f}% engage`  _{_short(t.get('text', ''), 80)}_"
+            )
+            lines.append("")
+            continue
+        lines.append(f"### {cat} ({len(bucket)})")
+        for t in bucket[:3]:
+            rate = _engagement_rate_pct(t)
+            lines.append(
+                f"- `[{int(t.get('age_h', 0))}h] {t.get('impression_count', 0):,} imps "
+                f"· {rate:.2f}% engage`  "
+                f"[{_short(t.get('text', ''), 90)}](https://x.com/{own}/status/{t['id']})  "
+                f"{suggestion.get(cat, '')}"
+            )
+        if len(bucket) > 3:
+            lines.append(f"- _+ {len(bucket) - 3} more_")
+        lines.append("")
+    return lines
+
+
+def _engagement_rate_pct(t: dict) -> float:
+    imps = t.get("impression_count", 0) or 0
+    if imps <= 0:
+        return 0.0
+    eng = (t.get("like_count", 0) or 0) + (t.get("retweet_count", 0) or 0) + (t.get("reply_count", 0) or 0)
+    return eng / imps * 100.0
+
+
 def _today_decision(data: "PulseData") -> list[str]:
     """1-paragraph TL;DR: what should you DO today, derived from the signals.
     Includes specific @handles and tweet IDs so /x-brief can act without scrolling.
@@ -141,7 +203,9 @@ def _today_decision(data: "PulseData") -> list[str]:
         if feats["originals"] == 0 and feats["replies"] >= 3:
             gaps.append("all replies today — brief should propose ≥1 original thread")
         if feats["with_link"] == 0 and len(data.own_tweets) >= 3:
-            gaps.append("0 link-bearing posts (reach -30-50% folklore aside, links lower OON-trapped risk per `oon_scorer.rs:21` since they pull in-network clicks)")
+            gaps.append("0 link-bearing posts (the -30-50% link-penalty is folklore; "
+                        "source treats links as neutral. Adding a citable link can help "
+                        "the `profile_click` / `click` heads but isn't required)")
         if feats["avg_likes"] < 1 and len(data.own_tweets) >= 3:
             gaps.append("avg <1❤ across posts — angle is missing in-network resonance; brief should index harder on your distinctive expertise angle")
         if gaps:
@@ -329,6 +393,11 @@ def render(data: "PulseData") -> str:
             for t in ranked[-min(3, len(ranked) - 3):]:
                 lines.append(_own_tweet_line(t, own))
     lines.append("")
+
+    # ---- 24-80h tail (still in candidate pool, daily — moved from weekly) ----
+    tail_lines = _tail_section(data)
+    if tail_lines:
+        lines.extend(tail_lines)
 
     # ---- kol posting velocity ----
     lines.append("## KOL posting velocity (via bird-search / last30days cookies)")

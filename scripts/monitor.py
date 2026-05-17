@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))  # so `from scripts import ...` works when run as a file
 
 from scripts import state                                      # noqa: E402
+from scripts import tail as tail_mod                           # noqa: E402
 from scripts.cost import CostCapExceeded, CostTracker          # noqa: E402
 from scripts.clients.last30days import (                       # noqa: E402
     Last30DaysClient,
@@ -96,6 +97,10 @@ class PulseData:
     failures: list[str] = field(default_factory=list)
     cost_summary: str = ""
     notes: list[str] = field(default_factory=list)
+    # 24-80h tail of own tweets that are still in the candidate pool per
+    # POST_AGE_MAX_MINUTES=4800 (phoenix/recsys_model.py:30). Each item has
+    # the keys produced by tail.categorize_all().
+    tail: list[dict[str, Any]] = field(default_factory=list)
 
 
 # -----------------------------------------------------------------------------
@@ -124,7 +129,8 @@ def _hours_since(ts: str | None) -> float:
 
 
 def _normalize_user_payload(raw: dict[str, Any]) -> dict[str, Any]:
-    """xapi.to shape unknown — pluck common fields from a few plausible layouts."""
+    """Pluck common fields from several plausible payload layouts.
+    Tolerates the historic xapi.to shape + bird-search + official X API."""
     inner = raw.get("data") or raw.get("user") or raw
     metrics = inner.get("public_metrics") or inner.get("metrics") or {}
     return {
@@ -188,6 +194,17 @@ def fetch_own_block(client: OfficialXClient, data: PulseData) -> None:
     data.own_mentions = client.me_mentions(max_results=20)
 
 
+def fetch_tail_block(client: OfficialXClient, data: PulseData) -> None:
+    """Fetch own tweets aged 24-80h via owned-reads + categorize them.
+    Cost: one call (~$0.001) regardless of result size. Persists today's
+    metrics so tomorrow can compute deltas."""
+    items = tail_mod.fetch_tail(client)
+    prior = tail_mod.load_prior_own_snapshot(data.today)
+    median = tail_mod.median_impressions(items)
+    data.tail = tail_mod.categorize_all(items, prior, median)
+    tail_mod.save_own_snapshot(items, data.today)
+
+
 def fetch_kol_block(
     client: Last30DaysClient,
     kols: list[KolRow],
@@ -200,9 +217,9 @@ def fetch_kol_block(
     - posting velocity delta (tweet_count_24h diff vs prior snapshot)
     - viral KOL posts (likes ≥ VIRAL_LIKES OR replies ≥ VIRAL_REPLIES in last 24h)
 
-    No follower counts (Bird doesn't surface them), no quote-tree hooks (no
-    reliable quote-search syntax). The trade vs the original xapi.to plan: free
-    + always available, at the cost of those two signals.
+    Bird doesn't surface follower counts or quote-search syntax, so those two
+    signals are out of scope here. The trade vs a paid KOL API: free + always
+    available + reuses your existing session.
     """
     for k in kols:
         if k.is_own:
@@ -309,7 +326,7 @@ def main() -> int:
     cost = CostTracker()
     data = PulseData(today=today, own_handle=own.handle if own else "")
 
-    # --- own block ---
+    # --- own block (+ 24-80h tail) ---
     official: OfficialXClient | None = None
     try:
         official = OfficialXClient(
@@ -318,6 +335,15 @@ def main() -> int:
             cost=cost,
         )
         fetch_own_block(official, data)
+        # Tail check: 24-80h candidates (POST_AGE_MAX_MINUTES=4800,
+        # phoenix/recsys_model.py:30). Independent try/except so a tail
+        # failure doesn't blank out the own block.
+        try:
+            fetch_tail_block(official, data)
+        except CostCapExceeded as e:
+            data.failures.append(f"cost cap during tail block: {e}")
+        except Exception as e:
+            data.failures.append(f"tail block: {e}")
     except OAuthError as e:
         data.failures.append(f"official OAuth: {e}")
     except CostCapExceeded as e:

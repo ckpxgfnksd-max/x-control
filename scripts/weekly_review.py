@@ -21,6 +21,7 @@ from scripts.tracker import events_in_last                        # noqa: E402
 from scripts.cost import CostTracker                              # noqa: E402
 from scripts.clients.official import OfficialXClient, OAuthError  # noqa: E402
 from scripts import queue                                         # noqa: E402
+from scripts import tail as tail_mod                              # noqa: E402
 
 ENV_PATH = Path.home() / ".config" / "x-control" / ".env"
 OUT_DIR = Path.home() / "Documents" / "Last30Days"
@@ -99,62 +100,55 @@ def _format_mix_section() -> list[str]:
 
 
 def _eighty_hour_tail(client: OfficialXClient | None) -> list[str]:
-    """Re-fetch engagement on own tweets aged 24-80h via owned-reads ($0.001 each)."""
+    """Re-fetch + categorize engagement on own tweets aged 24-80h. Shared
+    logic lives in `scripts/tail.py`; weekly review shows the full categorized
+    table while daily pulse shows the same thing."""
     if not client:
         return []
-    # Pull recent own_tweets (last 100, paginated if needed — for now just one page)
     try:
-        me = client.me()
-        recent = client._request(
-            "GET",
-            f"/2/users/{me['id']}/tweets",
-            params={
-                "max_results": 100,
-                "tweet.fields": "public_metrics,created_at",
-                "exclude": "retweets",
-            },
-        )
-        recent.raise_for_status()
-        data = recent.json().get("data", [])
+        items = tail_mod.fetch_tail(client)
     except Exception as e:
         return [f"## 80h tail check\n_Could not fetch: {e}_\n"]
-
-    now = datetime.now(timezone.utc)
-    in_window: list[dict] = []
-    for t in data:
-        try:
-            dt = datetime.fromisoformat(t["created_at"].replace("Z", "+00:00"))
-        except (KeyError, ValueError):
-            continue
-        age_h = (now - dt).total_seconds() / 3600.0
-        if 24 < age_h <= 80:
-            t["_age_h"] = age_h
-            in_window.append(t)
-    if not in_window:
+    if not items:
         return ["## 80h tail check", "_No tweets in the 24-80h window._", ""]
 
-    # Sort by current impressions, top 5
-    in_window.sort(
-        key=lambda t: (t.get("public_metrics") or {}).get("impression_count", 0),
-        reverse=True,
-    )
+    from datetime import date as _date
+    prior = tail_mod.load_prior_own_snapshot(_date.today())
+    median = tail_mod.median_impressions(items)
+    annotated = tail_mod.categorize_all(items, prior, median)
+
     lines = [
         "## 80h tail check",
-        "_Tweets aged 24-80h that are still in the candidate pool (`POST_AGE_MAX_MINUTES=4800`). "
-        "Ones still gaining engagement = topics worth doubling on._",
+        "_Tweets aged 24-80h that are still in the candidate pool "
+        "(`POST_AGE_MAX_MINUTES=4800`, `phoenix/recsys_model.py:30`). "
+        "Categories: growing = follow up, needs-rework = re-hook, dead = don't reuse._",
         "",
     ]
-    own_handle = me.get("username", "you")
-    for t in in_window[:5]:
-        m = t.get("public_metrics") or {}
-        text = (t.get("text") or "").replace("\n", " ")[:120]
-        lines.append(
-            f"- `{int(t['_age_h'])}h | "
-            f"{m.get('like_count', 0)}❤ {m.get('retweet_count', 0)}🔁 "
-            f"{m.get('reply_count', 0)}💬 {m.get('impression_count', 0):,}👁`  "
-            f"[{text}](https://x.com/{own_handle}/status/{t['id']})"
-        )
-    lines.append("")
+    own_handle = annotated[0].get("owner_handle") or "you"
+    by_cat: dict[str, list[dict]] = {}
+    for t in annotated:
+        by_cat.setdefault(t["category"], []).append(t)
+    for cat in ("growing", "needs-rework", "stable", "dead"):
+        bucket = by_cat.get(cat) or []
+        if not bucket:
+            continue
+        lines.append(f"### {cat} ({len(bucket)})")
+        for t in bucket[:5]:
+            text = (t.get("text") or "").replace("\n", " ")[:120]
+            imps = t.get("impression_count", 0) or 0
+            rate = (
+                ((t.get("like_count", 0) + t.get("retweet_count", 0) + t.get("reply_count", 0)) / imps * 100.0)
+                if imps else 0.0
+            )
+            lines.append(
+                f"- `{int(t['age_h'])}h | "
+                f"{t.get('like_count', 0)}❤ {t.get('retweet_count', 0)}🔁 "
+                f"{t.get('reply_count', 0)}💬 {imps:,}👁  ({rate:.2f}% engage)`  "
+                f"[{text}](https://x.com/{own_handle}/status/{t['id']})"
+            )
+        if len(bucket) > 5:
+            lines.append(f"- _+ {len(bucket) - 5} more_")
+        lines.append("")
     return lines
 
 
