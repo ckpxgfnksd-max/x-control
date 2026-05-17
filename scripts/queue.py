@@ -93,6 +93,45 @@ class Draft:
         v = self.frontmatter.get("parent_tweet_id")
         return str(v) if v else None
 
+    # ── algorithm-aware authoring metadata (all optional) ───────────────────
+    # These fields let signals.py and tracker.py reason about *what* the draft
+    # is trying to do (positive-signal targeting), not just *what risks it
+    # carries* (negative-feedback avoidance). All default to empty/None so
+    # existing drafts continue to load unchanged.
+    @property
+    def topic_tags(self) -> list[str]:
+        v = self.frontmatter.get("topic_tags") or []
+        if isinstance(v, str):
+            return [v]
+        return [str(t).strip() for t in v if str(t).strip()]
+
+    @property
+    def angle_type(self) -> str | None:
+        v = self.frontmatter.get("angle_type")
+        return str(v).strip() if v else None
+
+    @property
+    def audience_pool(self) -> str | None:
+        v = self.frontmatter.get("audience_pool")
+        return str(v).strip() if v else None
+
+    @property
+    def format_goal(self) -> str | None:
+        v = self.frontmatter.get("format_goal")
+        return str(v).strip() if v else None
+
+    @property
+    def experiment_label(self) -> str | None:
+        v = self.frontmatter.get("experiment_label")
+        return str(v).strip() if v else None
+
+    @property
+    def identity_hints(self) -> list[str]:
+        v = self.frontmatter.get("identity_hints") or []
+        if isinstance(v, str):
+            return [v]
+        return [str(t).strip() for t in v if str(t).strip()]
+
     def risk_markers(self) -> list[str]:
         markers = []
         full = self.body

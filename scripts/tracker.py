@@ -10,7 +10,14 @@ State at ~/.claude/skills/x-control/state/weekly_tracker.json:
      "lang": "cn|en|mixed",
      "is_reply": false,
      "tweet_count": 1,          # how many tweets in this ship (1 for standalone, N for thread)
-     "char_count": 247}
+     "char_count": 247,
+     # Optional authoring metadata (added 2026-05-17, all default to empty/None
+     # so old state files load without migration):
+     "topic_tags": ["tokenomics"],
+     "angle_type": "contrarian",
+     "audience_pool": "in_network",
+     "format_goal": "profile_clicks",
+     "experiment_label": "cn-thread-v2"}
   ]
 }
 """
@@ -61,12 +68,41 @@ def _detect_format(tweets: list[str], is_reply: bool) -> str:
     return "standalone"
 
 
+# Authoring-metadata fields. Centralized so callers can iterate them and
+# load() can fill missing defaults on legacy state files.
+_AUTHORING_DEFAULTS: dict[str, Any] = {
+    "topic_tags": [],
+    "angle_type": None,
+    "audience_pool": None,
+    "format_goal": None,
+    "experiment_label": None,
+}
+
+
+def _fill_defaults(event: dict[str, Any]) -> dict[str, Any]:
+    """Ensure an event has the authoring-metadata fields with safe defaults.
+    Mutates in place and returns the event for chaining."""
+    for k, v in _AUTHORING_DEFAULTS.items():
+        if k not in event:
+            event[k] = list(v) if isinstance(v, list) else v
+    return event
+
+
 def record_ship(
     tweet_id: str,
     tweets: list[str],
     is_reply: bool,
+    *,
+    topic_tags: list[str] | None = None,
+    angle_type: str | None = None,
+    audience_pool: str | None = None,
+    format_goal: str | None = None,
+    experiment_label: str | None = None,
 ) -> dict[str, Any]:
-    """Called from approve.py after a successful post. Returns the event dict."""
+    """Called from approve.py after a successful post. Returns the event dict.
+
+    The authoring-metadata kwargs are pulled from draft frontmatter by the
+    caller; all default to empty so old call sites stay compatible."""
     full_text = "\n\n".join(tweets)
     event = {
         "ts": datetime.now(timezone.utc).isoformat(),
@@ -76,6 +112,11 @@ def record_ship(
         "is_reply": is_reply,
         "tweet_count": len(tweets),
         "char_count": len(full_text),
+        "topic_tags": list(topic_tags or []),
+        "angle_type": angle_type,
+        "audience_pool": audience_pool,
+        "format_goal": format_goal,
+        "experiment_label": experiment_label,
     }
     data = _load()
     data["events"].append(event)
@@ -87,10 +128,45 @@ def record_ship(
 
 
 def events_in_last(hours: float) -> list[dict[str, Any]]:
-    """Events within the last N hours, newest first."""
+    """Events within the last N hours. Old events missing the authoring-metadata
+    fields are upgraded with defaults so consumers can read uniformly."""
     cutoff = (datetime.now(timezone.utc) - timedelta(hours=hours)).isoformat()
     data = _load()
-    return [e for e in data["events"] if e["ts"] >= cutoff]
+    return [_fill_defaults(dict(e)) for e in data["events"] if e["ts"] >= cutoff]
+
+
+def topic_mix(hours: float = 24 * 30) -> dict[str, int]:
+    """Return {topic: count} aggregated from event topic_tags over the window.
+    Used by signals.topic_fit() and diagnose.py to know the account's recent mix."""
+    from collections import Counter
+    c: Counter = Counter()
+    for e in events_in_last(hours):
+        for t in e.get("topic_tags") or []:
+            tag = str(t).strip().lower()
+            if tag:
+                c[tag] += 1
+    return dict(c)
+
+
+def angle_mix(hours: float = 24 * 14) -> dict[str, int]:
+    """Return {angle: count} over the window. Powers S19 monoculture detection."""
+    from collections import Counter
+    c: Counter = Counter()
+    for e in events_in_last(hours):
+        a = e.get("angle_type")
+        if a:
+            c[str(a).strip().lower()] += 1
+    return dict(c)
+
+
+def experiment_mix(hours: float = 24 * 30) -> dict[str, list[dict[str, Any]]]:
+    """Return {experiment_label: [events...]} for active experiments."""
+    out: dict[str, list[dict[str, Any]]] = {}
+    for e in events_in_last(hours):
+        label = e.get("experiment_label")
+        if label:
+            out.setdefault(str(label).strip(), []).append(e)
+    return out
 
 
 def count_by_format(hours: float) -> dict[str, int]:
