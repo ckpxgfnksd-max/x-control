@@ -225,3 +225,49 @@ Triggered by an audit asking whether the skill gives *viable* suggestions to lif
 ## Verdict
 
 **PASS.** 20-round autoresearch on the algorithm-grounded suggestion catalogue: **+72% on a 6-dimension rubric (98 → 169/180, 94%)**, with D1 (Algorithm coverage — the audit's primary metric) jumping from 17 → 29 (+12 absolute). All 6 dimensions improved or held at ceiling; none regressed.
+
+---
+
+# Round 21 — Positive-signal precheck (2026-05-17)
+
+Not a full autoresearch cycle — single incremental round flipping the skill from "avoid bad posts" to "maximize impressions." Flagging here so a future cycle can resume from this state.
+
+## What changed
+
+| File | Change | Why |
+|---|---|---|
+| `scripts/signals.py` (new) | 7 heuristic checks mirroring the positive-engagement heads in `home-mixer/scorers/ranking_scorer.rs` (favorite/retweet, reply, dwell, profile_click, follow_author, TopicOonWeightFactor) + negative-feedback rollup | Approval CLI surfaced only risk markers. Users had no way to see which axis a draft optimizes for. |
+| `scripts/approve.py` | Render the signal panel above tweet bodies; pass new frontmatter fields into `tracker.record_ship()` | Human approval gate unchanged; just adds context. |
+| `scripts/queue.py` | `Draft` accessors for `topic_tags`, `angle_type`, `audience_pool`, `format_goal`, `experiment_label`, `identity_hints` | Authoring intent had no place to live; tracker had nothing to roll up by topic/angle. |
+| `scripts/tracker.py` | Event schema gains optional metadata fields with BC default-fill on read; new `topic_mix()`, `angle_mix()`, `experiment_mix()` helpers | Diagnose/pulse can now ask "what topics has this account been on?" and "is this draft new territory?" |
+| `scripts/tail.py` (new) | Extracted 24-80h logic from weekly_review + 3-state categorize (growing/needs-rework/dead) + `state/own_snapshot_*.json` persistence | Sunday-only follow-up loses 6 days of signal. Daily classification surfaces which posts deserve reply/re-hook vs which are dead. |
+| `scripts/monitor.py` | Calls `tail.fetch_tail()` after own-block; persists snapshot for day-over-day delta | Cost: ~$0.005/day (well under cap). |
+| `scripts/digest.py` | Renders tail section grouped by category; fixed unsupported "links lower OON-trapped risk" claim | Daily-readable categorized tail; doc accuracy. |
+| `scripts/weekly_review.py` | Uses shared `tail.py` so weekly + daily stay in sync | DRY; categorization shared. |
+| `scripts/diagnose.py` | S19 (angle monoculture) + S20 (experiment maturity) fire when tracker has 3+ events with the new fields | Quiet no-op for accounts that haven't started using the fields. |
+| `README.md` / `SKILL.md` | Documented positive-signal panel + tail; cleaned remaining `xapi.to` operational references | Source of truth now matches code. |
+| `tests/` (new) | 48 tests covering risk markers, signals, render, tracker backward compat | First test suite in the repo. Runs in ~120ms. |
+
+## Manual eval
+
+3 personas × 2 deltas. Pass = new panel adds a distinct, actionable signal the risk panel alone did not.
+
+| Persona | Risk-only output | + positive-signal panel | Delta? |
+|---|---|---|---|
+| cold-start | "no risks" → user has no idea what's missing | repostability/reply/dwell all low, topic-fit=0 (no tags), follow-author=0 → "draft is generic; declare tags + add a series marker" | ✅ |
+| heavy-replier | callout_named_account flagged → "delete" | reply-worthiness=high but neg-feedback=HIGH → "the reply lever is real but you're trading it for negative-feedback weight; rephrase" | ✅ |
+| burst-poster | burst warning + risks → "thread instead" | dwell-potential low + topic-fit high → "you're on-topic but single-tweet; pack 4 of these into a thread to combine in-topic discount with the dwell head" | ✅ |
+
+3/3. Risk-only output was action-blocking ("don't ship"); signal panel is direction-giving ("ship, but rotate the angle/format/identity tease to unlock head X").
+
+## What round 22 should pick up
+
+- **Quantitative weight estimation.** Heuristics are direction-only. A passive A/B over 30 days (tweet pairs differing on one head) could yield empirical weights for the 7 panel signals. Until then, treat the panel as qualitative.
+- **Topic-tag auto-suggest.** Reading the draft text and proposing `topic_tags` from a small vocabulary (~30 tags pulled from 30-day tracker history) saves typing and improves S19/S20 coverage.
+- **Tail follow-up draft generator.** When a tail item is `needs-rework`, offer to draft a re-hook reply or follow-up post. Stays manual-approval.
+- **Per-experiment dashboard.** Once enough `experiment_label` events accumulate, surface in `serve.py`.
+- **Full rubric pass.** D1-D7 with personas focused on the new affordances (Draft-Author, Tail-Reviewer, Experiment-Designer). Estimated: 20 rounds, anchored at +30% on a "positive-signal coverage" dimension.
+
+## Verdict
+
+**SHIPPED, NOT BENCHMARKED.** The new panel produces visibly distinct output per persona on inspection (3/3 manual eval) and adds zero regressions (48 tests pass, all 3 fixture digests + diagnoses render). Numeric impact awaits a Round 22 autoresearch + the empirical weight study.
