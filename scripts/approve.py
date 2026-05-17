@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts import queue                                        # noqa: E402
+from scripts import signals                                      # noqa: E402
 from scripts import tracker                                      # noqa: E402
 from scripts.cost import CostTracker                             # noqa: E402
 from scripts.clients.official import OfficialXClient             # noqa: E402
@@ -43,6 +44,21 @@ def _show(d: queue.Draft, posted_4h: int) -> None:
         f"  type={d.kind}  target={fm.get('target_time') or '—'}  "
         f"reply_to={d.in_reply_to or '—'}  url_count={fm.get('url_count', 0)}"
     ))
+    # Surface authoring-intent metadata so the user can see what targeting
+    # they declared. Empty fields are skipped.
+    intent_bits = []
+    if d.topic_tags:
+        intent_bits.append(f"tags={','.join(d.topic_tags)}")
+    if d.angle_type:
+        intent_bits.append(f"angle={d.angle_type}")
+    if d.audience_pool:
+        intent_bits.append(f"pool={d.audience_pool}")
+    if d.format_goal:
+        intent_bits.append(f"goal={d.format_goal}")
+    if d.experiment_label:
+        intent_bits.append(f"exp={d.experiment_label}")
+    if intent_bits:
+        print(_dim("  intent: " + "  ".join(intent_bits)))
     risks = d.risk_markers()
     if risks:
         print(_red("  risks: " + ", ".join(risks)))
@@ -56,6 +72,27 @@ def _show(d: queue.Draft, posted_4h: int) -> None:
         ))
     if is_thread:
         print(_yellow(f"  (thread, {len(tweets)} tweets — counts as one author event)"))
+
+    # ── impression-lift signal panel (mirrors ranking_scorer.rs head structure)
+    own_topics = set(tracker.topic_mix(hours=24 * 30).keys())
+    panel = signals.score_draft(
+        d.body,
+        tweet_count=len(tweets),
+        frontmatter=fm,
+        own_topics=own_topics,
+        risk_markers=risks,
+    )
+    print()
+    print(_dim("  impression-lift signals (per ranking_scorer.rs heads):"))
+    label_w = max(len(s.name) for s in panel)
+    for s in panel:
+        if s.name == "neg-feedback-risk":
+            tag = signals.neg_label(s.score)
+            color = _red if tag == "HIGH" else (_yellow if tag == "MED" else _green)
+            print(f"    {s.name:<{label_w}}  {color(tag):<22}  {_dim(s.reason)}")
+        else:
+            bar = signals.bars(s.score)
+            print(f"    {s.name:<{label_w}}  {bar:<5}  {_dim(s.reason)}")
     print()
     for i, t in enumerate(tweets):
         cc = len(t)
@@ -163,9 +200,15 @@ def _approve_one(
             return "skipped"
         first_id = ids[0]
         url = f"https://x.com/i/web/status/{first_id}"
-        # Record the ship for the weekly tracker (powers digest gap detection)
+        # Record the ship for the weekly tracker (powers digest gap detection
+        # + S19/S20 angle-diversity / experiment-maturity suggestions).
         ship_event = tracker.record_ship(
             tweet_id=first_id, tweets=d.tweets, is_reply=is_reply,
+            topic_tags=d.topic_tags,
+            angle_type=d.angle_type,
+            audience_pool=d.audience_pool,
+            format_goal=d.format_goal,
+            experiment_label=d.experiment_label,
         )
         queue.archive(d, "posted", {
             "tweet_id": first_id,
